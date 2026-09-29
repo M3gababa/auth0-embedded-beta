@@ -170,6 +170,16 @@ h1 {
   margin: 0 0 14px;
 }
 
+.change-note {
+  font-size: 12px;
+  color: #d9b45c;
+  background: rgba(217, 180, 92, 0.1);
+  border: 1px solid rgba(217, 180, 92, 0.3);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 0 0 14px;
+}
+
 .step-inputs {
   display: flex;
   gap: 12px;

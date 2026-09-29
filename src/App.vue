@@ -104,12 +104,17 @@ function refreshStep1Body() {
 
 function saveConfig() {
   refreshStep1Body()
+  syncStep2()
+  syncStep3()
+  syncStep4()
 }
 
 // ---- Step 2: identify ----
+// changes 29/09/2026: added client_id to the payload.
 const step2 = makeStep(
   JSON.stringify(
     {
+      client_id: config.clientId,
       action: identifyAction(),
       [identifierField()]: config.identifier,
       auth_session: ''
@@ -122,6 +127,7 @@ const step2 = makeStep(
 function syncStep2() {
   step2.requestBody = JSON.stringify(
     {
+      client_id: config.clientId,
       action: identifyAction(),
       [identifierField()]: config.identifier,
       auth_session: pipeline.authSession
@@ -132,10 +138,14 @@ function syncStep2() {
 }
 
 // ---- Step 3: challenge ----
+// changes 29/09/2026: added client_id to the payload; added index (the user's enrolled
+// factor to challenge — always 0 for a first authentication).
 const step3 = makeStep(
   JSON.stringify(
     {
+      client_id: config.clientId,
       action: challengeAction(),
+      index: 0,
       auth_session: ''
     },
     null,
@@ -146,7 +156,9 @@ const step3 = makeStep(
 function syncStep3() {
   step3.requestBody = JSON.stringify(
     {
+      client_id: config.clientId,
       action: challengeAction(),
+      index: 0,
       auth_session: pipeline.authSession
     },
     null,
@@ -155,11 +167,15 @@ function syncStep3() {
 }
 
 // ---- Step 4: verify ----
+// changes 29/09/2026: added client_id to the payload; added type (the authenticator type
+// being verified — full list of accepted values not yet identified, "totp" confirmed working).
 const otp = ref('')
 const step4 = makeStep(
   JSON.stringify(
     {
+      client_id: config.clientId,
       action: 'action:verify:otp:v1',
+      type: 'totp',
       otp: '',
       auth_session: ''
     },
@@ -171,7 +187,9 @@ const step4 = makeStep(
 function syncStep4() {
   step4.requestBody = JSON.stringify(
     {
+      client_id: config.clientId,
       action: 'action:verify:otp:v1',
+      type: 'totp',
       otp: otp.value,
       auth_session: pipeline.authSession
     },
@@ -437,6 +455,7 @@ function resetAll() {
     :statusCode="step2.statusCode"
     :response="step2.response"
     :error="step2.error"
+    changeNote="Added <strong>client_id</strong> to the payload."
     @sync="syncStep2"
     @send="sendStep2"
   >
@@ -463,6 +482,7 @@ function resetAll() {
     :statusCode="step3.statusCode"
     :response="step3.response"
     :error="step3.error"
+    changeNote="Added <strong>client_id</strong> to the payload; added <strong>index</strong> (the user's enrolled factor to challenge — always 0 for first authentication)."
     @sync="syncStep3"
     @send="sendStep3"
   >
@@ -489,6 +509,7 @@ function resetAll() {
     :statusCode="step4.statusCode"
     :response="step4.response"
     :error="step4.error"
+    changeNote="Added <strong>client_id</strong> to the payload; added <strong>type</strong> (authenticator type being verified — list of accepted values not yet identified, &quot;totp&quot; confirmed working)."
     @sync="syncStep4"
     @send="sendStep4"
   >

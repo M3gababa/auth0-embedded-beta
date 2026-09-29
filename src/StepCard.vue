@@ -12,7 +12,8 @@ defineProps({
   statusCode: { type: [Number, String, null], default: null },
   response: { type: [Object, Array, null], default: null },
   error: { type: String, default: '' },
-  canSync: { type: Boolean, default: true }
+  canSync: { type: Boolean, default: true },
+  changeNote: { type: String, default: '' }
 })
 
 const emit = defineEmits(['update:requestBody', 'send', 'sync'])
@@ -38,6 +39,10 @@ function onBodyInput(e) {
     </div>
     <div class="step-body">
       <p class="step-desc">{{ description }}</p>
+
+      <p v-if="changeNote" class="change-note">
+        <strong>changes 29/09/2026</strong> — <span v-html="changeNote"></span>
+      </p>
 
       <div class="step-inputs">
         <slot name="inputs" />
