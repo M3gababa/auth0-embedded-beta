@@ -408,12 +408,18 @@ function resetAll() {
       <label>Scope</label>
       <input v-model="config.scope" type="text" />
     </div>
-    <div class="field">
-      <label>Identify factor</label>
-      <div class="radio-row">
-        <label><input type="radio" value="email" v-model="config.factor" /> Email OTP</label>
-        <label><input type="radio" value="phone" v-model="config.factor" /> SMS OTP</label>
+    <div class="step-inputs" style="align-items: center">
+      <div class="field">
+        <label>Identify factor</label>
+        <div class="radio-row">
+          <label><input type="radio" value="email" v-model="config.factor" /> Email OTP</label>
+          <label><input type="radio" value="phone" v-model="config.factor" /> SMS OTP</label>
+        </div>
       </div>
+      <p class="change-note" style="margin: 0; flex: 1">
+        The selected database connection must have only <strong>passwordless email or SMS</strong>
+        enabled for this to work currently. Support for password is in progress.
+      </p>
     </div>
     <div class="field">
       <label>{{ config.factor === 'phone' ? 'Phone number' : 'Email address' }}</label>
