@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/api/auth0-proxy/(.*)", "destination": "/api/auth0-proxy/[...path]?path=$1" }
+  ]
+}
