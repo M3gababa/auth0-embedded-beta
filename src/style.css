@@ -56,6 +56,11 @@ h1 {
   margin-bottom: 4px;
 }
 
+.field-hint {
+  color: #767c88;
+  font-weight: normal;
+}
+
 .field input[type='text'],
 .field textarea {
   width: 100%;

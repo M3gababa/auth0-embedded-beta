@@ -390,7 +390,10 @@ function resetAll() {
         <input v-model="config.domain" type="text" placeholder="your-tenant.auth0.com" />
       </div>
       <div class="field">
-        <label>Client ID</label>
+        <label>
+          Client ID
+          <span class="field-hint">(First-Party, Native, CORS/Web Origins enabled for this app)</span>
+        </label>
         <input v-model="config.clientId" type="text" placeholder="client_id" />
       </div>
     </div>
