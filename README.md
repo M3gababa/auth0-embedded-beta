@@ -47,12 +47,19 @@ each request and checking the response before moving to the next.
 
 ## CORS proxy
 
-Browsers can't call `https://your-tenant.auth0.com/e/authorize` directly
-from `fetch` due to CORS. The Vite dev server (`vite.config.js`) exposes a
-`/auth0-proxy` middleware that forwards requests server-side to
-`https://<domain>` (read from the `x-auth0-domain` header), sidestepping
-CORS entirely. This proxy only runs in `vite dev` — it is dev-tooling, not
-something meant to be deployed.
+Browsers can't call `https://your-tenant.auth0.com/e/authorize` (or
+`/oauth/token`, for this native flow) directly from `fetch` — Auth0 doesn't
+send CORS headers for these native/embedded endpoints. Requests are routed
+through a server-side proxy at `/api/auth0-proxy/*`, which forwards to
+`https://<domain>` (read from the `x-auth0-domain` header). There are two
+implementations behind that same path, so the frontend code doesn't need to
+care which environment it's running in:
+
+- **Local dev**: the Vite dev server (`vite.config.js`) exposes an
+  `auth0ProxyPlugin` middleware.
+- **Deployed (e.g. Vercel)**: `api/auth0-proxy/[...path].js` is a serverless
+  function that does the same forward. Vercel picks up anything under `api/`
+  automatically — no extra config needed.
 
 ## Token decoding
 
@@ -71,13 +78,14 @@ re-enter it between sessions. No tokens or OTPs are persisted.
 
 - Vue 3 (`<script setup>`, no router, no state library — a handful of
   `reactive`/`ref` objects)
-- Vite, with a small custom plugin for the CORS proxy above
-- No backend beyond the dev-server proxy
+- Vite, with a small custom plugin for the CORS proxy in dev
+- A single Vercel serverless function for the same proxy when deployed
 
 ## Project structure
 
 ```
 index.html          entry HTML
+api/auth0-proxy/     Vercel serverless function (production CORS proxy)
 src/main.js          mounts the app
 src/App.vue          all flow/state logic + the 5 step definitions
 src/StepCard.vue      presentational card: request editor + response viewer

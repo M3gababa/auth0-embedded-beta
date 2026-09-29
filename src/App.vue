@@ -37,9 +37,10 @@ watch(
 
 const cleanDomain = computed(() => config.domain.replace(/^https?:\/\//, '').replace(/\/$/, ''))
 const baseUrl = computed(() => `https://${cleanDomain.value}`)
-// Dev-only: browser CORS blocks direct calls to /e/authorize, so requests are routed through
-// the Vite dev server proxy (vite.config.js), which forwards them server-side (no CORS involved).
-const proxyBaseUrl = computed(() => '/auth0-proxy')
+// /e/authorize and /oauth/token (native flow) don't send CORS headers, so requests are routed
+// through a server-side proxy: the Vite dev middleware (vite.config.js) locally, or the
+// api/auth0-proxy serverless function once deployed. Same path both ways.
+const proxyBaseUrl = computed(() => '/api/auth0-proxy')
 
 // -------- shared pipeline state (values steps hand off to each other) --------
 const pipeline = reactive({
@@ -257,7 +258,7 @@ async function runStep(step, url, { isProgress, afterSuccess } = {}) {
     afterSuccess?.(json)
   } catch (e) {
     step.status = 'error'
-    step.error = `Network error: ${e.message}. Make sure the Vite dev server is running (requests are proxied server-side to avoid browser CORS) and the domain is correct.`
+    step.error = `Network error: ${e.message}. Make sure the dev server or deployed proxy is reachable (requests are proxied server-side to avoid browser CORS) and the domain is correct.`
   }
 }
 

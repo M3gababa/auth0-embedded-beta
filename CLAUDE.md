@@ -23,11 +23,13 @@ configuration. See README.md for the full flow and usage.
   an `auth_session` and that's progress. Each call site passes its own
   `isProgress(json, res)` predicate rather than relying on `res.ok`. If you
   add a step, follow this pattern rather than checking `res.ok` directly.
-- `vite.config.js` defines `auth0ProxyPlugin`, a dev-server-only middleware
-  mounted at `/auth0-proxy` that forwards requests to
-  `https://<domain>` (domain from the `x-auth0-domain` header) to route
-  around browser CORS. This only exists in `vite dev` (`configureServer`),
-  not in production builds — don't assume it's available outside `npm run dev`.
+- `/e/authorize` and `/oauth/token` (native flow) don't send CORS headers, so
+  calls must go through a server-side proxy at `/api/auth0-proxy/*`, which
+  forwards to `https://<domain>` (domain from the `x-auth0-domain` header).
+  Two implementations share that same path: `vite.config.js`'s
+  `auth0ProxyPlugin` (dev-server middleware, `vite dev` only) and
+  `api/auth0-proxy/[...path].js` (Vercel serverless function, used once
+  deployed/built). Keep both in sync if the forwarding logic changes.
 
 ## Conventions already in place
 

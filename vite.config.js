@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-const PROXY_PREFIX = '/auth0-proxy'
+const PROXY_PREFIX = '/api/auth0-proxy'
 
 function auth0ProxyPlugin() {
   return {
