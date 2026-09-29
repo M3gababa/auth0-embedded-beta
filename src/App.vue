@@ -365,6 +365,11 @@ function resetAll() {
 </script>
 
 <template>
+  <p class="change-note">
+    <strong>BETA</strong> — the Embedded feature is currently under development. Changes to the
+    API may and will happen, and they will break this testing app.
+  </p>
+
   <div class="top-bar">
     <div>
       <h1>Auth0 Embedded Login — Flow Debugger</h1>
