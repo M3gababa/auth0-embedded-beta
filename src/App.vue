@@ -167,6 +167,9 @@ function syncStep3() {
 }
 
 // ---- Step 4: verify ----
+// changes 07/10/2026: changed type to "oob" (Out-Of-Band — covers SMS, voice, push
+// notifications, and email).
+//
 // changes 29/09/2026: added client_id to the payload; added type (the authenticator type
 // being verified — full list of accepted values not yet identified, "totp" confirmed working).
 const otp = ref('')
@@ -175,7 +178,7 @@ const step4 = makeStep(
     {
       client_id: config.clientId,
       action: 'action:verify:otp:v1',
-      type: 'totp',
+      type: 'oob',
       otp: '',
       auth_session: ''
     },
@@ -189,7 +192,7 @@ function syncStep4() {
     {
       client_id: config.clientId,
       action: 'action:verify:otp:v1',
-      type: 'totp',
+      type: 'oob',
       otp: otp.value,
       auth_session: pipeline.authSession
     },
@@ -494,7 +497,7 @@ if (applyUrlParams(config)) {
     :statusCode="step2.statusCode"
     :response="step2.response"
     :error="step2.error"
-    changeNote="Added <strong>client_id</strong> to the payload."
+    changeNote="<strong>changes 29/09/2026</strong> — Added <strong>client_id</strong> to the payload."
     @sync="syncStep2"
     @send="sendStep2"
   >
@@ -521,7 +524,7 @@ if (applyUrlParams(config)) {
     :statusCode="step3.statusCode"
     :response="step3.response"
     :error="step3.error"
-    changeNote="Added <strong>client_id</strong> to the payload; added <strong>index</strong> (the user's enrolled factor to challenge — always 0 for first authentication)."
+    changeNote="<strong>changes 29/09/2026</strong> — Added <strong>client_id</strong> to the payload; added <strong>index</strong> (the user's enrolled factor to challenge — always 0 for first authentication)."
     @sync="syncStep3"
     @send="sendStep3"
   >
@@ -548,7 +551,7 @@ if (applyUrlParams(config)) {
     :statusCode="step4.statusCode"
     :response="step4.response"
     :error="step4.error"
-    changeNote="Added <strong>client_id</strong> to the payload; added <strong>type</strong> (authenticator type being verified — list of accepted values not yet identified, &quot;totp&quot; confirmed working)."
+    changeNote="<strong>changes 07/10/2026</strong> — Changed <strong>type</strong> to <strong>oob</strong> (Out-Of-Band — covers SMS, voice, push notifications, and email).<br /><br /><strong>changes 29/09/2026</strong> — Added <strong>client_id</strong> to the payload; added <strong>type</strong> (authenticator type being verified — list of accepted values not yet identified, &quot;totp&quot; confirmed working)."
     @sync="syncStep4"
     @send="sendStep4"
   >

@@ -40,9 +40,7 @@ function onBodyInput(e) {
     <div class="step-body">
       <p class="step-desc">{{ description }}</p>
 
-      <p v-if="changeNote" class="change-note">
-        <strong>changes 29/09/2026</strong> — <span v-html="changeNote"></span>
-      </p>
+      <p v-if="changeNote" class="change-note" v-html="changeNote"></p>
 
       <div class="step-inputs">
         <slot name="inputs" />
