@@ -404,6 +404,11 @@ if (applyUrlParams(config)) {
 
   <div class="panel">
     <h2>Tenant &amp; client configuration</h2>
+    <p class="change-note">
+      <strong>changes 07/10/2026</strong> — the client used for this flow must have
+      <strong>embedded_authorize</strong> enabled (set via the Management API; not yet exposed
+      in the Dashboard UI).
+    </p>
     <div class="step-inputs">
       <div class="field">
         <label>Auth0 domain</label>
