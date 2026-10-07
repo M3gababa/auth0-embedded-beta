@@ -431,7 +431,9 @@ if (applyUrlParams(config)) {
         <input v-model="config.connection" type="text" />
       </div>
       <div class="field">
-        <label>Audience</label>
+        <label>Audience
+          <span class="field-hint">(Optional)</span>
+        </label>
         <input v-model="config.audience" type="text" />
       </div>
     </div>
