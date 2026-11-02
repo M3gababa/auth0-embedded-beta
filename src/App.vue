@@ -1,9 +1,22 @@
 <script setup>
-import { reactive, ref, computed, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import StepCard from './StepCard.vue'
-import { highlightJson, decodeJwt } from './jsonUtils'
+import { decodeJwt, highlightJson } from './jsonUtils'
 
 const STORAGE_KEY = 'auth0-embedded-debugger:config'
+
+const capabilities = [
+  'action:identify:email:v1',
+  'action:identify:phone:v1',
+  'action:identify:password:v1',
+  'action:challenge:email:v1',
+  'action:challenge:phone:v1',
+  'action:challenge:password:v1',
+  'action:verify:otp:v1',
+  'action:enroll:password:v1',
+  'action:signup:v1',
+  'action:signup:confirm:v1'
+]
 
 const defaultConfig = {
   domain: '',
@@ -12,13 +25,14 @@ const defaultConfig = {
   audience: '',
   scope:
     'create:me:authentication_methods update:me:authentication_methods read:me:authentication_methods read:me:connected_accounts delete:me:authentication_methods create:me:connected_accounts offline_access read:me:factors',
-  factor: 'email', // 'email' | 'phone'
-  identifier: ''
+  capabilities: [...capabilities]
 }
 
 function loadConfig() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+    delete saved.factor
+    delete saved.identifier
     return { ...defaultConfig, ...saved }
   } catch {
     return { ...defaultConfig }
@@ -49,6 +63,12 @@ const pipeline = reactive({
   accessToken: null,
   nextActions: []
 })
+const selectedAction = ref('')
+const factor = ref('email')
+const identifier = ref('')
+const identifyFactorLocked = computed(() =>
+  ['action:identify:email:v1', 'action:identify:phone:v1'].includes(selectedAction.value)
+)
 
 const decodedAccessToken = computed(() => decodeJwt(pipeline.accessToken?.access_token))
 const decodedIdToken = computed(() => decodeJwt(pipeline.accessToken?.id_token))
@@ -63,14 +83,16 @@ function makeStep(initialBody) {
   })
 }
 
-function identifyAction() {
-  return config.factor === 'phone' ? 'action:identify:phone:v1' : 'action:identify:email:v1'
-}
 function challengeAction() {
-  return config.factor === 'phone' ? 'action:challenge:phone:v1' : 'action:challenge:email:v1'
+  return factor.value === 'phone' ? 'action:challenge:phone:v1' : 'action:challenge:email:v1'
 }
 function identifierField() {
-  return config.factor === 'phone' ? 'phone_number' : 'email'
+  return factor.value === 'phone' ? 'phone' : 'email'
+}
+function setNextActions(actions) {
+  pipeline.nextActions = actions
+  selectedAction.value = ''
+  syncStep2()
 }
 
 // ---- Step 1: init ----
@@ -78,7 +100,7 @@ const step1 = makeStep(
   JSON.stringify(
     {
       client_id: config.clientId,
-      capabilities: ['action:identify:email:v1', 'action:identify:phone:v1'],
+      capabilities: config.capabilities,
       connection: config.connection,
       audience: config.audience,
       scope: config.scope
@@ -92,7 +114,7 @@ function refreshStep1Body() {
   step1.requestBody = JSON.stringify(
     {
       client_id: config.clientId,
-      capabilities: ['action:identify:email:v1', 'action:identify:phone:v1'],
+      capabilities: config.capabilities,
       connection: config.connection,
       audience: config.audience,
       scope: config.scope
@@ -115,8 +137,8 @@ const step2 = makeStep(
   JSON.stringify(
     {
       client_id: config.clientId,
-      action: identifyAction(),
-      [identifierField()]: config.identifier,
+      action: selectedAction.value,
+      [identifierField()]: identifier.value,
       auth_session: ''
     },
     null,
@@ -128,13 +150,27 @@ function syncStep2() {
   step2.requestBody = JSON.stringify(
     {
       client_id: config.clientId,
-      action: identifyAction(),
-      [identifierField()]: config.identifier,
+      action: selectedAction.value,
+      [identifierField()]: identifier.value,
       auth_session: pipeline.authSession
     },
     null,
     2
   )
+}
+
+function syncFactor() {
+  syncStep2()
+  syncStep3()
+}
+
+function syncSelectedAction() {
+  if (selectedAction.value === 'action:identify:email:v1') {
+    factor.value = 'email'
+  } else if (selectedAction.value === 'action:identify:phone:v1') {
+    factor.value = 'phone'
+  }
+  syncFactor()
 }
 
 // ---- Step 3: challenge ----
@@ -145,6 +181,7 @@ const step3 = makeStep(
     {
       client_id: config.clientId,
       action: challengeAction(),
+      ...(factor.value === 'phone' ? { delivery_method: 'text' } : {}),
       index: 0,
       auth_session: ''
     },
@@ -158,6 +195,7 @@ function syncStep3() {
     {
       client_id: config.clientId,
       action: challengeAction(),
+      ...(factor.value === 'phone' ? { delivery_method: 'text' } : {}),
       index: 0,
       auth_session: pipeline.authSession
     },
@@ -288,18 +326,23 @@ function sendStep1() {
     isProgress: (json) => Boolean(json.auth_session),
     afterSuccess: (json) => {
       pipeline.authSession = json.auth_session
-      pipeline.nextActions = json.next || []
-      syncStep2()
+      setNextActions(json.next || [])
     }
   })
 }
 
 function sendStep2() {
+  if (!selectedAction.value) {
+    step2.status = 'error'
+    step2.error = 'Select an action from the next list before sending this step.'
+    return
+  }
+
   runStep(step2, `${proxyBaseUrl.value}/e/authorize`, {
     isProgress: (json) => Boolean(json.auth_session),
     afterSuccess: (json) => {
       pipeline.authSession = json.auth_session
-      pipeline.nextActions = json.next || []
+      setNextActions(json.next || [])
       syncStep3()
     }
   })
@@ -310,7 +353,7 @@ function sendStep3() {
     isProgress: (json) => Boolean(json.auth_session),
     afterSuccess: (json) => {
       pipeline.authSession = json.auth_session
-      pipeline.nextActions = json.next || []
+      setNextActions(json.next || [])
       syncStep4()
     }
   })
@@ -322,7 +365,7 @@ function sendStep4() {
     afterSuccess: (json) => {
       if (json.auth_session) {
         pipeline.authSession = json.auth_session
-        pipeline.nextActions = json.next || []
+        setNextActions(json.next || [])
       }
       if (json.authorization_code) {
         pipeline.authorizationCode = json.authorization_code
@@ -345,8 +388,10 @@ function resetAll() {
   config.clientId = ''
   config.connection = ''
   config.audience = ''
-  config.identifier = ''
-  config.factor = 'email'
+  config.capabilities = [...defaultConfig.capabilities]
+  factor.value = 'email'
+  identifier.value = ''
+  selectedAction.value = ''
   otp.value = ''
 
   pipeline.authSession = ''
@@ -368,7 +413,7 @@ function resetAll() {
 
 // -------- URL-driven prefill (e.g. links generated by demoPlatform scripts) --------
 // Query params matching defaultConfig keys (domain, clientId, connection, audience, scope,
-// factor, identifier) override whatever's in localStorage. This only fills the form and
+// capabilities) override whatever's in localStorage. This only fills the form and
 // refreshes step 1's request body — it never submits anything, that's still manual.
 function applyUrlParams(cfg) {
   const params = new URLSearchParams(window.location.search)
@@ -411,6 +456,8 @@ if (applyUrlParams(config)) {
       <strong>changes 07/10/2026</strong> — the client used for this flow must have
       <strong>embedded_authorize</strong> enabled (set via the Management API; not yet exposed
       in the Dashboard UI).
+      <br /><br /><strong>changes 02/11/2026</strong> — All capabilities must currently be specified;
+      they will become optional in a future release.
     </p>
     <div class="step-inputs">
       <div class="field">
@@ -441,22 +488,17 @@ if (applyUrlParams(config)) {
       <label>Scope</label>
       <input v-model="config.scope" type="text" />
     </div>
-    <div class="step-inputs" style="align-items: center">
-      <div class="field">
-        <label>Identify factor</label>
-        <div class="radio-row">
-          <label><input type="radio" value="email" v-model="config.factor" /> Email OTP</label>
-          <label><input type="radio" value="phone" v-model="config.factor" /> SMS OTP</label>
-        </div>
-      </div>
-      <p class="change-note" style="margin: 0; flex: 1">
-        The selected database connection must have only <strong>passwordless email or SMS</strong>
-        enabled for this to work currently. Support for password is in progress.
-      </p>
-    </div>
     <div class="field">
-      <label>{{ config.factor === 'phone' ? 'Phone number' : 'Email address' }}</label>
-      <input v-model="config.identifier" type="text" />
+      <label>Authorize capabilities</label>
+      <details class="capabilities-menu" @change="refreshStep1Body">
+        <summary>{{ config.capabilities.length }} selected</summary>
+        <div class="capabilities-options">
+          <label v-for="capability in capabilities" :key="capability">
+            <input v-model="config.capabilities" type="checkbox" :value="capability" />
+            {{ capability }}
+          </label>
+        </div>
+      </details>
     </div>
     <button type="button" @click="saveConfig">Save &amp; apply to step 1</button>
   </div>
@@ -478,12 +520,12 @@ if (applyUrlParams(config)) {
   >
     <template #extract>
       <h4>Auth0-suggested next action(s)</h4>
-      <p class="extract-row" v-if="pipeline.nextActions.length">
-        {{ pipeline.nextActions.map((a) => a.action).join(', ') }}
+      <p class="extract-row" v-if="step1.response?.next?.length">
+        {{ step1.response.next.map((a) => a.action).join(', ') }}
       </p>
       <p class="extract-row" v-else>(none yet)</p>
       <h4 style="margin-top: 12px">auth_session forwarded</h4>
-      <p class="extract-row">{{ pipeline.authSession || '(none yet)' }}</p>
+      <p class="extract-row">{{ step1.response?.auth_session || '(none yet)' }}</p>
     </template>
   </StepCard>
 
@@ -499,18 +541,41 @@ if (applyUrlParams(config)) {
     :statusCode="step2.statusCode"
     :response="step2.response"
     :error="step2.error"
+    :canSend="Boolean(selectedAction)"
     changeNote="<strong>changes 29/09/2026</strong> — Added <strong>client_id</strong> to the payload."
     @sync="syncStep2"
     @send="sendStep2"
   >
+    <template #inputs>
+      <div class="field">
+        <label>Next action</label>
+        <select v-model="selectedAction" :disabled="!pipeline.nextActions.length" @change="syncSelectedAction">
+          <option value="" disabled>Select an action</option>
+          <option v-for="nextAction in pipeline.nextActions" :key="nextAction.action" :value="nextAction.action">
+            {{ nextAction.action }}
+          </option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Identify factor</label>
+        <div class="radio-row">
+          <label><input v-model="factor" type="radio" value="email" :disabled="identifyFactorLocked" @change="syncFactor" /> Email OTP</label>
+          <label><input v-model="factor" type="radio" value="phone" :disabled="identifyFactorLocked" @change="syncFactor" /> Phone OTP</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>{{ factor === 'phone' ? 'Phone number' : 'Email address' }}</label>
+        <input v-model="identifier" type="text" @input="syncStep2" />
+      </div>
+    </template>
     <template #extract>
       <h4>Auth0-suggested next action(s)</h4>
-      <p class="extract-row" v-if="pipeline.nextActions.length">
-        {{ pipeline.nextActions.map((a) => a.action).join(', ') }}
+      <p class="extract-row" v-if="step2.response?.next?.length">
+        {{ step2.response.next.map((a) => a.action).join(', ') }}
       </p>
       <p class="extract-row" v-else>(none yet)</p>
       <h4 style="margin-top: 12px">auth_session forwarded</h4>
-      <p class="extract-row">{{ pipeline.authSession || '(none yet)' }}</p>
+      <p class="extract-row">{{ step2.response?.auth_session || '(none yet)' }}</p>
     </template>
   </StepCard>
 
@@ -526,18 +591,18 @@ if (applyUrlParams(config)) {
     :statusCode="step3.statusCode"
     :response="step3.response"
     :error="step3.error"
-    changeNote="<strong>changes 29/09/2026</strong> — Added <strong>client_id</strong> to the payload; added <strong>index</strong> (the user's enrolled factor to challenge — always 0 for first authentication)."
+    changeNote="<strong>changes 02/11/2026</strong> — Phone challenges require a <strong>delivery_method</strong> of <strong>text</strong> or <strong>voice</strong>.<br /><br /><strong>changes 29/09/2026</strong> — Added <strong>client_id</strong> to the payload; added <strong>index</strong> (the user's enrolled factor to challenge — always 0 for first authentication)."
     @sync="syncStep3"
     @send="sendStep3"
   >
     <template #extract>
       <h4>Auth0-suggested next action(s)</h4>
-      <p class="extract-row" v-if="pipeline.nextActions.length">
-        {{ pipeline.nextActions.map((a) => a.action).join(', ') }}
+      <p class="extract-row" v-if="step3.response?.next?.length">
+        {{ step3.response.next.map((a) => a.action).join(', ') }}
       </p>
       <p class="extract-row" v-else>(none yet)</p>
       <h4 style="margin-top: 12px">auth_session forwarded</h4>
-      <p class="extract-row">{{ pipeline.authSession || '(none yet)' }}</p>
+      <p class="extract-row">{{ step3.response?.auth_session || '(none yet)' }}</p>
     </template>
   </StepCard>
 
@@ -565,7 +630,7 @@ if (applyUrlParams(config)) {
     </template>
     <template #extract>
       <h4>authorization_code forwarded</h4>
-      <p class="extract-row">{{ pipeline.authorizationCode || '(none yet)' }}</p>
+      <p class="extract-row">{{ step4.response?.authorization_code || '(none yet)' }}</p>
     </template>
   </StepCard>
 

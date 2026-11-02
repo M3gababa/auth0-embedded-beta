@@ -1,5 +1,5 @@
 <script setup>
-import { highlightJson } from './jsonUtils'
+import { highlightJson } from './jsonUtils';
 
 defineProps({
   number: { type: Number, required: true },
@@ -13,6 +13,7 @@ defineProps({
   response: { type: [Object, Array, null], default: null },
   error: { type: String, default: '' },
   canSync: { type: Boolean, default: true },
+  canSend: { type: Boolean, default: true },
   changeNote: { type: String, default: '' }
 })
 
@@ -55,7 +56,7 @@ function onBodyInput(e) {
         <button v-if="canSync" class="secondary" type="button" @click="$emit('sync')">
           Sync from previous step
         </button>
-        <button type="button" :disabled="status === 'loading'" @click="$emit('send')">
+        <button type="button" :disabled="status === 'loading' || !canSend" @click="$emit('send')">
           {{ status === 'loading' ? 'Sending…' : 'Send request' }}
         </button>
       </div>
