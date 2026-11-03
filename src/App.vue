@@ -524,8 +524,6 @@ if (applyUrlParams(config)) {
         {{ step1.response.next.map((a) => a.action).join(', ') }}
       </p>
       <p class="extract-row" v-else>(none yet)</p>
-      <h4 style="margin-top: 12px">auth_session forwarded</h4>
-      <p class="extract-row">{{ step1.response?.auth_session || '(none yet)' }}</p>
     </template>
   </StepCard>
 
@@ -574,8 +572,6 @@ if (applyUrlParams(config)) {
         {{ step2.response.next.map((a) => a.action).join(', ') }}
       </p>
       <p class="extract-row" v-else>(none yet)</p>
-      <h4 style="margin-top: 12px">auth_session forwarded</h4>
-      <p class="extract-row">{{ step2.response?.auth_session || '(none yet)' }}</p>
     </template>
   </StepCard>
 
@@ -601,8 +597,6 @@ if (applyUrlParams(config)) {
         {{ step3.response.next.map((a) => a.action).join(', ') }}
       </p>
       <p class="extract-row" v-else>(none yet)</p>
-      <h4 style="margin-top: 12px">auth_session forwarded</h4>
-      <p class="extract-row">{{ step3.response?.auth_session || '(none yet)' }}</p>
     </template>
   </StepCard>
 
